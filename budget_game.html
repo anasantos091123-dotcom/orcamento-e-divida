@@ -1,0 +1,147 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Jogo de Orçamento & Dívidas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#0f1724;color:#e6eef6;font-family:Inter,system-ui;padding:20px}
+  .container{max-width:800px;margin:0 auto}
+  h1{text-align:center;margin:0 0 20px}
+  .card{background:#1b2539;padding:16px;border-radius:12px;margin-bottom:20px;box-shadow:0 4px 14px rgba(0,0,0,0.5)}
+  button{background:#06b6d4;color:#041014;font-weight:600;padding:10px 16px;border:none;border-radius:8px;cursor:pointer}
+  button:hover{opacity:0.9}
+  .event{background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;margin:10px 0}
+  .choices{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .positive{color:#22c55e;font-weight:600}
+  .negative{color:#fb7185;font-weight:600}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>💰 Jogo de Orçamento & Dívidas</h1>
+
+  <div id="game" class="card">
+    <p>Bem-vindo! Você precisa sobreviver 12 meses mantendo seu saldo positivo.</p>
+    <button onclick="startGame()">Começar</button>
+  </div>
+</div>
+
+<script>
+let state = {
+  month: 0,
+  balance: 0,
+  debt: 0,
+  salary: 2500,
+  history: []
+};
+
+const events = [
+  {text:"Conta de luz chegou: R$ 200", cost:200},
+  {text:"Conta de água: R$ 150", cost:150},
+  {text:"Transporte do mês: R$ 300", cost:300},
+  {text:"Supermercado: R$ 500", cost:500},
+  {text:"Cinema e lazer: R$ 120", cost:120},
+  {text:"Comprou roupas novas: R$ 250", cost:250},
+  {text:"Celular quebrou, conserto: R$ 400", cost:400},
+  {text:"Trabalho extra: ganhou R$ 600", cost:-600},
+  {text:"Investimento rendeu R$ 300", cost:-300},
+  {text:"Convite para viagem: custa R$ 800", cost:800}
+];
+
+function startGame(){
+  state.month = 0;
+  state.balance = 0;
+  state.debt = 0;
+  state.history = [];
+  nextMonth();
+}
+
+function nextMonth(){
+  state.month++;
+  state.balance += state.salary;
+  const game = document.getElementById('game');
+  if(state.month>12){
+    if(state.balance>=0 && state.debt===0){
+      game.innerHTML = `<h2>🎉 Parabéns!</h2><p>Você sobreviveu 12 meses e manteve suas finanças em ordem!</p><p>Saldo final: <span class='positive'>R$ ${state.balance}</span></p><button onclick="startGame()">Jogar de novo</button>`;
+    }else{
+      game.innerHTML = `<h2>😢 Fim do jogo</h2><p>Você não conseguiu manter o saldo positivo.</p><p>Saldo final: <span class='negative'>R$ ${state.balance}</span></p><button onclick="startGame()">Tentar novamente</button>`;
+    }
+    return;
+  }
+
+  // gerar eventos aleatórios
+  let roundEvents = [];
+  for(let i=0;i<3;i++){
+    roundEvents.push(events[Math.floor(Math.random()*events.length)]);
+  }
+
+  let html = `<h2>Mês ${state.month}</h2>`;
+  html += `<p>Você recebeu seu salário: <span class='positive'>+R$ ${state.salary}</span></p>`;
+  html += `<p>Saldo atual: <strong>R$ ${state.balance}</strong></p>`;
+  html += `<h3>Eventos do mês:</h3>`;
+
+  roundEvents.forEach((ev, idx)=>{
+    html += `<div class="event"><p>${ev.text}</p>`;
+    html += `<div class="choices">`;
+    if(ev.cost>0){
+      html += `<button onclick="acceptEvent(${ev.cost})">Pagar R$ ${ev.cost}</button>`;
+      html += `<button onclick="refuseEvent(${ev.cost})">Não pagar (gera dívida)</button>`;
+    }else{
+      html += `<button onclick="acceptEvent(${ev.cost})">Aceitar (ganhar R$ ${-ev.cost})</button>`;
+      html += `<button onclick="refuseEvent(0)">Ignorar</button>`;
+    }
+    html += `</div></div>`;
+  });
+
+  html += `<hr><button onclick="endMonth()">Finalizar mês</button>`;
+
+  game.innerHTML = html;
+}
+
+function acceptEvent(cost){
+  state.balance -= cost;
+  if(cost>0){
+    state.history.push(`Pagou ${cost}`);
+  }else{
+    state.history.push(`Ganhou ${-cost}`);
+  }
+  nextStep();
+}
+
+function refuseEvent(cost){
+  if(cost>0){
+    state.debt += cost;
+    state.history.push(`Não pagou ${cost}, virou dívida`);
+  }else{
+    state.history.push(`Ignorou oportunidade`);
+  }
+  nextStep();
+}
+
+function nextStep(){
+  // apenas recarregar a tela para atualizar saldo
+  let b = document.getElementById('game');
+  b.querySelector('p strong').innerText = "R$ "+state.balance;
+}
+
+function endMonth(){
+  // cobrar juros das dívidas
+  if(state.debt>0){
+    let juros = Math.round(state.debt*0.1); // 10% ao mês
+    state.debt += juros;
+    state.balance -= juros;
+  }
+
+  if(state.balance<0){
+    document.getElementById('game').innerHTML = `<h2>💀 Game Over</h2><p>Seu saldo ficou negativo no mês ${state.month}.</p><p>Saldo: <span class='negative'>R$ ${state.balance}</span></p><button onclick="startGame()">Tentar novamente</button>`;
+    return;
+  }
+
+  nextMonth();
+}
+</script>
+</body>
+</html>
